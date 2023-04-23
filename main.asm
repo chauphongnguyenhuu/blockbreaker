@@ -17,15 +17,38 @@ section .text
     extern XOpenDisplay
 
 _start:
-    xor     rdi, rdi        ; use DISPLAY environment variable
+    xor     rdi, rdi
     call    XOpenDisplay
 
-    mov     rax, 60         ; exit program
+.exit:
+    mov     rax, 60
     xor     rdi, rdi
     syscall
+
+;-------------------------------------------------------------
+; print a null-terminated string
+;
+; @param rdi
+;   a null-terminated string
+;-------------------------------------------------------------
+print_string:
+    cmp     byte [rdi], 0h
+    je      .done
+
+    xor     rdx, rdx
+.strlen:
+    inc     rdx
+    cmp     byte [rdi + rdx], 0h
+    jne     .strlen
+
+    mov     rax, 1
+    mov     rsi, rdi
+    mov     rdi, 1
+    ; rdx holds the message length
+    syscall
+.done:
+    ret
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 section .data
     display: dq 0h
-
-
