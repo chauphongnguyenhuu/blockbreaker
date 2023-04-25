@@ -168,6 +168,64 @@ section .text
     ;-------------------------------------------------------------
     extern XLookupKeysym
 
+    ;-------------------------------------------------------------
+    ; set foreground color for drawing
+    ;
+    ; @param rdi
+    ;   display pointer
+    ;
+    ; @param rsi
+    ;   graphics context (gc)
+    ;
+    ; @param rdx
+    ;   foreground color
+    ;-------------------------------------------------------------
+    extern XSetForeground
+
+    ;-------------------------------------------------------------
+    ; create a graphics context
+    ;
+    ; @param rdi
+    ;   display pointer
+    ;
+    ; @param rsi
+    ;   specifies the drawable, it is the window in this case
+    ;
+    ; @param rdx
+    ;   valuemask - specifies which components in the GC are
+    ;   to be set using the information in the specified value structure
+    ;
+    ; @param rcx
+    ;   specifies any values as specified by the valuemask
+    ;-------------------------------------------------------------
+    extern XCreateGC
+
+    ;-------------------------------------------------------------
+    ; fills the specified rectangle
+    ;
+    ; @param rdi
+    ;   display pointer
+    ;
+    ; @param rsi
+    ;   drawable, it is a window in this case
+    ;
+    ; @param rdx
+    ;   graphics context (gc)
+    ;
+    ; @param ecx
+    ;   x
+    ;
+    ; @param r8d
+    ;   y
+    ;
+    ; @param r9d
+    ;   width
+    ;
+    ; @param [rsp + 8]
+    ;   height
+    ;-------------------------------------------------------------
+    extern XFillRectangle
+
 _start:
     call create_window
 
@@ -199,6 +257,13 @@ _start:
     jmp     .process_events
 
 .update:
+
+.render:
+    mov     edi, 10
+    mov     esi, 20
+    mov     edx, 200
+    mov     ecx, 50
+    call    draw_rectangle
 
     jmp     .game_loop
 
@@ -261,6 +326,13 @@ create_window:
 
     mov     rdi, [display]
     mov     rsi, [window]
+    xor     rdx, rdx
+    xor     rcx, rcx
+    call    XCreateGC
+    mov     [gc], rax
+
+    mov     rdi, [display]
+    mov     rsi, [window]
     mov     rdx, 20002h ; KeyReleaseMask | ButtonMotionMask
     call    XSelectInput
 
@@ -278,6 +350,50 @@ create_window:
     jne     .wait_map_notify
 
 .exit:
+    pop     rbp
+    ret
+
+;-------------------------------------------------------------
+; draw a white rectangle
+;
+; @param edi
+;   x
+;
+; @param esi
+;   y
+;
+; @param edx
+;   width
+;
+; @param ecx
+;   height
+;-------------------------------------------------------------
+draw_rectangle:
+    push    rbp
+    mov     rbp, rsp
+    sub     rsp, 24
+
+    mov     dword [rbp - 4], edi
+    mov     dword [rbp - 8], esi
+    mov     dword [rbp - 12], edx
+    mov     dword [rbp - 16], ecx
+
+    mov     rdi, [display]
+    mov     rsi, [gc]
+    mov     rdx, [white_color]
+    call    XSetForeground
+
+    mov     rdi, [display]
+    mov     rsi, [window]
+    mov     rdx, [gc]
+    mov     ecx, dword [rbp - 4]
+    mov     r8d, dword [rbp - 8]
+    mov     r9d, dword [rbp - 12]
+    mov     eax, dword [rbp - 16]
+    push    rax
+    call    XFillRectangle
+
+    add     rsp, 32
     pop     rbp
     ret
 
@@ -307,13 +423,14 @@ print_string:
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 section .data
-    display: dq 0h
-    screen_number: dd 0h
-    black_color: dq 0h
-    white_color: dq 0h
-    root_window: dq 0h
-    window: dq 0h
-    running: db 1h
+    display:        dq 0h
+    screen_number:  dd 0h
+    black_color:    dq 0h
+    white_color:    dq 0h
+    root_window:    dq 0h
+    window:         dq 0h
+    running:        db 1h
+    gc:             dq 0h
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 section .bss
@@ -322,4 +439,3 @@ section .bss
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 section .rodata
     msg_open_display_failed: db "failed to open a connection to X server", 0ah, 0h
-    msg_game_loop: db "game loop", 0ah, 0h
