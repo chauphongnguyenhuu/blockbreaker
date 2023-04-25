@@ -5,11 +5,11 @@ section .text
 
     ;-------------------------------------------------------------
     ; open a connection to the X server that controls a display
-    ; 
+    ;
     ; @param rdi
     ;   specifies the hardware display name.
     ;   if it is NULL, the DISPLAY environment variable will be used
-    ; 
+    ;
     ; @return rax
     ;   return the pointer of Display structure.
     ;   if it does not succeed, it return NULL
@@ -18,7 +18,7 @@ section .text
 
     ;-------------------------------------------------------------
     ; get the default screen number referenced by the display
-    ; 
+    ;
     ; @param rdi
     ;   the display, which is returned by XOpenDisplay()
     ;
@@ -70,7 +70,7 @@ section .text
     ; create a window that inherits its attributes
     ; from its parent window
     ;
-    ; @param rdi 
+    ; @param rdi
     ;   the display pointer
     ;
     ; @param rsi
@@ -90,11 +90,11 @@ section .text
     ;
     ; @param [rsp + 8]
     ;   border width
-    ; 
-    ; @param [rsp + 12]
+    ;
+    ; @param [rsp + 16]
     ;   border color
     ;
-    ; @param [rsp + 20]
+    ; @param [rsp + 24]
     ;   blackground color
     ;
     ; @return rax
@@ -114,6 +114,9 @@ section .text
     extern XMapWindow
 
     ;-------------------------------------------------------------
+    ; pop event from event queue, flush buffer
+    ; and block until it receives event
+    ;
     ; @param rdi
     ;   the display pointer
     ;
@@ -136,12 +139,67 @@ section .text
     ;-------------------------------------------------------------
     extern XSelectInput
 
+    ;-------------------------------------------------------------
+    ; searchs event queue, get first event that matches, pop it from queue.
+    ; flush buffer, doesn't block process
+    ;
+    ; @param rdi
+    ;   display pointer
+    ;
+    ; @param rsi
+    ;   window
+    ;
+    ; @param rdx
+    ;   event_mask
+    ;
+    ; @param rcx
+    ;   event_return
+    ;-------------------------------------------------------------
+    extern XCheckWindowEvent
+
+    ;-------------------------------------------------------------
+    ; return the key code of given event
+    ;
+    ; @param rdi
+    ;   key_event pointer
+    ;
+    ; @param rsi
+    ;   index
+    ;-------------------------------------------------------------
+    extern XLookupKeysym
+
 _start:
     call create_window
 
 .game_loop:
-    mov     rdi, msg_game_loop
-    call    print_string
+    cmp     byte [running], 1h
+    jne     .exit ; @TODO(phong2.nguyen) should jump to .end_game_loop instead
+
+.process_events:
+    mov     rdi, [display]
+    mov     rsi, [window]
+    mov     rdx, 2h ; KeyReleaseMask
+    lea     rcx, [event]
+    call    XCheckWindowEvent
+    cmp     al, 0h
+    je      .update
+
+    ; check if it is KeyRelease event
+    mov     eax, [event]
+    cmp     eax, 3h
+    jne     .process_events
+
+    lea     rdi, [event]
+    xor     rsi, rsi
+    call    XLookupKeysym
+    cmp     rax, 0xff1b ; ESC key
+    sete    al
+    not     al
+    mov     byte [running], al
+    jmp     .process_events
+
+.update:
+
     jmp     .game_loop
 
 .exit:
@@ -203,21 +261,21 @@ create_window:
 
     mov     rdi, [display]
     mov     rsi, [window]
-    mov     rdx, 20003h
+    mov     rdx, 20002h ; KeyReleaseMask | ButtonMotionMask
     call    XSelectInput
 
     mov     rdi, [display]
     mov     rsi, [window]
     call    XMapWindow
 
-.wait_visible:
+.wait_map_notify:
     mov     rdi, [display]
     lea     rsi, [event]
     call    XNextEvent
 
     mov     eax, [event]
-    cmp     eax, 13h
-    jne     .wait_visible
+    cmp     eax, 13h ; MapNotify event
+    jne     .wait_map_notify
 
 .exit:
     pop     rbp
@@ -255,6 +313,7 @@ section .data
     white_color: dq 0h
     root_window: dq 0h
     window: dq 0h
+    running: db 1h
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 section .bss
