@@ -463,6 +463,12 @@ get_time:
     pop     rbp
     ret
 
+;-------------------------------------------------------------
+; sleep for some milliseconds
+;
+; @param rdi
+;   milliseconds that u want to sleep
+;-------------------------------------------------------------
 sleep_ms:
     push    rbp
     mov     rbp, rsp
