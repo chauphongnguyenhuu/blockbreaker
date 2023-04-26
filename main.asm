@@ -270,10 +270,11 @@ _start:
     mov     rsi, [window]
     call    XClearWindow
 
-    mov     edi, 10
-    mov     esi, 20
-    mov     edx, 200
-    mov     ecx, 50
+    ; draw paddle
+    mov     edi, [paddle_x]
+    mov     esi, [paddle_y]
+    mov     edx, [paddle_width]
+    mov     ecx, [paddle_height]
     call    draw_rectangle
 
     mov     rdi, [display]
@@ -529,6 +530,11 @@ section .data
     running:        db 1h
     gc:             dq 0h
     frame_time:     dq 0h
+
+    paddle_x:       dq 300
+    paddle_y:       dq 770
+    paddle_width:   dq 200
+    paddle_height:  dq 20
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 section .bss
