@@ -371,7 +371,7 @@ create_window:
 draw_rectangle:
     push    rbp
     mov     rbp, rsp
-    sub     rsp, 24
+    sub     rsp, 16
 
     mov     dword [rbp - 4], edi
     mov     dword [rbp - 8], esi
@@ -393,7 +393,7 @@ draw_rectangle:
     push    rax
     call    XFillRectangle
 
-    add     rsp, 32
+    add     rsp, 24
     pop     rbp
     ret
 
