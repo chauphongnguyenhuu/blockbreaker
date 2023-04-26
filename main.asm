@@ -226,12 +226,19 @@ section .text
     ;-------------------------------------------------------------
     extern XFillRectangle
 
+    extern XClearWindow
+    extern XFlush
+
 _start:
     call create_window
 
 .game_loop:
     cmp     byte [running], 1h
     jne     .exit ; @TODO(phong2.nguyen) should jump to .end_game_loop instead
+
+    ; get time at start of frame
+    call    get_time
+    mov     [frame_time], rax
 
 .process_events:
     mov     rdi, [display]
@@ -259,11 +266,30 @@ _start:
 .update:
 
 .render:
+    mov     rdi, [display]
+    mov     rsi, [window]
+    call    XClearWindow
+
     mov     edi, 10
     mov     esi, 20
     mov     edx, 200
     mov     ecx, 50
     call    draw_rectangle
+
+    mov     rdi, [display]
+    call    XFlush
+
+    ; get time at end of frame
+    call    get_time
+    mov     rbx, [frame_time]
+    sub     rax, rbx
+    cmp     rax, 30 ; see if we have spent less than 30ms in this frame
+    jg      .game_loop
+
+    ; sleep for remainder of 30ms
+    mov     rdi, 30
+    sub     rdi, rax
+    call    sleep_ms
 
     jmp     .game_loop
 
@@ -398,6 +424,71 @@ draw_rectangle:
     ret
 
 ;-------------------------------------------------------------
+; get the time since epoch in milliseconds
+;
+; @return rax
+;   milliseconds since epoch
+;-------------------------------------------------------------
+get_time:
+    push    rbp
+    mov     rbp, rsp
+
+    ; reserves space for timeval struct
+    ; +---------+
+    ; | tv_usec | = 8 bytes
+    ; +---------+
+    ; | tv_sec  | = 8 bytes
+    ; +---------+
+    sub     rsp, 16
+
+    mov     rax, 96 ; sys_gettimeofday
+    lea     rdi, [rbp - 16]
+    xor     rsi, rsi
+    syscall
+
+    push    rbx
+
+    mov     rax, qword [rbp - 16]   ; seconds
+    mov     rbx, qword [rbp - 8]    ; microseconds
+
+    imul    rax, rax, 1000000       ; convert seconds to microseconds
+    add     rax, rbx                ; add microseconds
+    xor     rdx, rdx
+    mov     rbx, 1000
+    div     rbx                     ; convert microseconds to milliseconds
+
+    pop     rbx
+
+    add     rsp, 16
+    pop     rbp
+    ret
+
+sleep_ms:
+    push    rbp
+    mov     rbp, rsp
+
+    ; reserves space for timeval struct
+    ; +---------+
+    ; | tv_usec | = 8 bytes
+    ; +---------+
+    ; | tv_sec  | = 8 bytes
+    ; +---------+
+    sub     rsp, 16
+
+    imul    rdi, rdi, 1000000       ; convert supplied ms to ns
+    mov     qword [rbp - 8], rdi    ; store tv_usec
+    mov     qword [rbp - 16], 0h    ; tv_sec = 0
+
+    mov     rax, 35 ; sys_nanosleep
+    lea     rdi, [rbp - 16]
+    xor     rsi, rsi
+    syscall
+
+    add     rsp, 16
+    pop     rbp
+    ret
+
+;-------------------------------------------------------------
 ; print a null-terminated string
 ;
 ; @param rdi
@@ -431,6 +522,7 @@ section .data
     window:         dq 0h
     running:        db 1h
     gc:             dq 0h
+    frame_time:     dq 0h
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 section .bss
