@@ -233,12 +233,11 @@ _start:
     call create_window
 
 .game_loop:
-    cmp     byte [running], 1h
-    jne     .exit ; @TODO(phong2.nguyen) should jump to .end_game_loop instead
-
     ; get time at start of frame
     call    get_time
     mov     [frame_time], rax
+    mov     qword [move_left], 0
+    mov     qword [move_right], 0
 
 .process_events:
     mov     rdi, [display]
@@ -257,13 +256,31 @@ _start:
     lea     rdi, [event]
     xor     rsi, rsi
     call    XLookupKeysym
+
     cmp     rax, 0xff1b ; ESC key
-    sete    al
-    not     al
-    mov     byte [running], al
+    je      .end_game_loop
+
+.check_left_arrow_key:
+    cmp     rax, 0xff51 ; Left Arrow Key
+    jne     .check_right_arrow_key
+
+    mov     qword [move_left], 1
+    jmp     .process_events
+
+.check_right_arrow_key:
+    cmp     rax, 0xff53 ; Right Arrow Key
+    jne     .process_events
+
+    mov     qword [move_right], 1
     jmp     .process_events
 
 .update:
+    cmp     qword [move_left], 1
+    jne     .render
+
+    mov     rax, qword [paddle_x]
+    sub     rax, 10
+    mov     qword [paddle_x], rax
 
 .render:
     mov     rdi, [display]
@@ -293,6 +310,8 @@ _start:
     call    sleep_ms
 
     jmp     .game_loop
+
+.end_game_loop:
 
 .exit:
     mov     rax, 60
@@ -527,7 +546,6 @@ section .data
     white_color:    dq 0h
     root_window:    dq 0h
     window:         dq 0h
-    running:        db 1h
     gc:             dq 0h
     frame_time:     dq 0h
 
@@ -535,6 +553,9 @@ section .data
     paddle_y:       dq 770
     paddle_width:   dq 200
     paddle_height:  dq 20
+
+    move_left:      dq 0h
+    move_right:     dq 0h
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 section .bss
