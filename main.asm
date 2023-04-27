@@ -242,16 +242,16 @@ _start:
 .process_events:
     mov     rdi, [display]
     mov     rsi, [window]
-    mov     rdx, 2h ; KeyReleaseMask
+    mov     rdx, 3h ; KeyReleaseMask | KeyPressMask
     lea     rcx, [event]
     call    XCheckWindowEvent
     cmp     al, 0h
     je      .update
 
-    ; check if it is KeyRelease event
+.check_key_release_event:
     mov     eax, [event]
     cmp     eax, 3h
-    jne     .process_events
+    jne     .check_key_press_event
 
     lea     rdi, [event]
     xor     rsi, rsi
@@ -259,6 +259,14 @@ _start:
 
     cmp     rax, 0xff1b ; ESC key
     je      .end_game_loop
+
+.check_key_press_event:
+    cmp     eax, 2h
+    jne     .process_events
+
+    lea     rdi, [event]
+    xor     rsi, rsi
+    call    XLookupKeysym
 
 .check_left_arrow_key:
     cmp     rax, 0xff51 ; Left Arrow Key
@@ -388,7 +396,7 @@ create_window:
 
     mov     rdi, [display]
     mov     rsi, [window]
-    mov     rdx, 20002h ; KeyReleaseMask | ButtonMotionMask
+    mov     rdx, 20003h ; KeyPressMask | KeyReleaseMask | ButtonMotionMask
     call    XSelectInput
 
     mov     rdi, [display]
