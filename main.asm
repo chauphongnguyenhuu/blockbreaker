@@ -275,11 +275,20 @@ _start:
     jmp     .process_events
 
 .update:
+.check_move_left:
     cmp     qword [move_left], 1
-    jne     .render
+    jne     .check_move_right
 
     mov     rax, qword [paddle_x]
     sub     rax, 10
+    mov     qword [paddle_x], rax
+
+.check_move_right:
+    cmp     qword [move_right], 1
+    jne     .render
+
+    mov     rax, qword [paddle_x]
+    add     rax, 10
     mov     qword [paddle_x], rax
 
 .render:
