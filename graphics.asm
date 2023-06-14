@@ -5,6 +5,8 @@ section .text
     global draw_rectangle
     global get_event
 
+    extern print_string
+
     extern XOpenDisplay
     extern XDefaultScreen
     extern XBlackPixel
@@ -31,27 +33,21 @@ create_window:
 
     xor     rdi, rdi
     call    XOpenDisplay
-    cmp     rax, 0h
-    jne     .open_display_success
-
-    ; mov     rdi, msg_open_display_failed
-    ; call    print_string
-    jmp     .exit
-
-.open_display_success:
+    test    rax, rax
+    jz      .open_display_failed
     mov     [display], rax
 
-    mov     rdi, rax ; rax is holding display pointer
+    mov     rdi, [display]
     call    XDefaultScreen
-    mov     [screen_number], eax
+    mov     [screen_number], rax
 
     mov     rdi, [display]
-    mov     esi, eax ; eax is holding screen number
+    mov     rsi, [screen_number]
     call    XBlackPixel
     mov     [black_color], rax
 
     mov     rdi, [display]
-    mov     esi, [screen_number]
+    mov     rsi, [screen_number]
     call    XWhitePixel
     mov     [white_color], rax
 
@@ -61,10 +57,10 @@ create_window:
 
     mov     rdi, [display]
     mov     rsi, [root_window]
-    mov     edx, 0h
-    mov     ecx, 0h
-    mov     r8d, 800
-    mov     r9d, 800
+    xor     rdx, rdx
+    xor     rcx, rcx
+    mov     r8, 800
+    mov     r9, 800
     mov     rax, [black_color]
     push    rax
     mov     rax, [white_color]
@@ -90,17 +86,14 @@ create_window:
     mov     rsi, [window]
     call    XMapWindow
 
-.wait_map_notify:
-    mov     rdi, [display]
-    lea     rsi, [event]
-    call    XNextEvent
+    jmp     .exit
 
-    mov     eax, [event]
-    cmp     eax, 13h ; MapNotify event
-    jne     .wait_map_notify
-
+.open_display_failed:
+    lea     rdi, [msg_open_display_failed]
+    call    print_string
+    
 .exit:
-    pop     rbp
+    leave
     ret
 
 ;-------------------------------------------------------------
@@ -175,6 +168,9 @@ get_event:
     lea     rcx, [rdi]
     call    XCheckWindowEvent
     ret
+
+section .rodata
+    msg_open_display_failed: db "failed to open a display", 0ah, 0h
 
 section .data
     display:        dq 0h
