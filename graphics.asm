@@ -1,9 +1,14 @@
+%define WINDOW_WIDTH 800
+%define WINDOW_HEIGHT 800
+%define KEY_RELEASE 3h
+
 section .text
     global create_window
     global clear_window
     global flush_buffer
     global draw_rectangle
     global get_window_event
+    global check_key_release
 
     extern print_string
 
@@ -59,8 +64,8 @@ create_window:
     mov     rsi, [root_window]
     xor     rdx, rdx
     xor     rcx, rcx
-    mov     r8, 800
-    mov     r9, 800
+    mov     r8, WINDOW_WIDTH
+    mov     r9, WINDOW_HEIGHT
     mov     rax, [black_color]
     push    rax
     mov     rax, [white_color]
@@ -175,6 +180,30 @@ get_window_event:
     mov     rdx, 3h ; KeyReleaseMask | KeyPressMask
     call    XCheckWindowEvent
 
+    pop     rbp
+    ret
+
+check_key_release:
+    push    rbp
+
+    mov     rbp, [rdi]
+    cmp     rbp, KEY_RELEASE
+    jne     .failed
+
+    mov     rbp, rsi
+
+    xor     rsi, rsi
+    call    XLookupKeysym
+    cmp     rax, rbp
+    jne     .failed
+
+    mov     rax, 1
+    jmp     .exit
+
+.failed:
+    xor     rax, rax
+
+.exit:
     pop     rbp
     ret
 
