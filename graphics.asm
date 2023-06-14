@@ -19,7 +19,6 @@ section .text
     extern XDefaultRootWindow
     extern XCreateSimpleWindow
     extern XMapWindow
-    extern XNextEvent
     extern XSelectInput
     extern XCheckWindowEvent
     extern XLookupKeysym
@@ -125,27 +124,20 @@ flush_buffer:
 ;-------------------------------------------------------------
 ; draw a white rectangle
 ;
-; @param edi
-;   x
-;
-; @param esi
-;   y
-;
-; @param edx
-;   width
-;
-; @param ecx
-;   height
+; @param x
+; @param y
+; @param width
+; @param height
 ;-------------------------------------------------------------
 draw_rectangle:
     push    rbp
     mov     rbp, rsp
-    sub     rsp, 16
+    sub     rsp, 32
 
-    mov     dword [rbp - 4], edi
-    mov     dword [rbp - 8], esi
-    mov     dword [rbp - 12], edx
-    mov     dword [rbp - 16], ecx
+    mov     [rbp - 8], rdi
+    mov     [rbp - 16], rsi
+    mov     [rbp - 24], rdx
+    mov     [rbp - 32], rcx
 
     mov     rdi, [display]
     mov     rsi, [gc]
@@ -155,15 +147,14 @@ draw_rectangle:
     mov     rdi, [display]
     mov     rsi, [window]
     mov     rdx, [gc]
-    mov     ecx, dword [rbp - 4]
-    mov     r8d, dword [rbp - 8]
-    mov     r9d, dword [rbp - 12]
-    mov     eax, dword [rbp - 16]
+    mov     rcx, [rbp - 8]
+    mov     r8, [rbp - 16]
+    mov     r9, [rbp - 24]
+    mov     rax,[rbp - 32]
     push    rax
     call    XFillRectangle
 
-    add     rsp, 24
-    pop     rbp
+    leave
     ret
 
 ;-------------------------------------------------------------
