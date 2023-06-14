@@ -3,7 +3,7 @@ section .text
     global clear_window
     global flush_buffer
     global draw_rectangle
-    global get_event
+    global get_window_event
 
     extern print_string
 
@@ -161,12 +161,21 @@ draw_rectangle:
     pop     rbp
     ret
 
-get_event:
+;-------------------------------------------------------------
+; get window event
+;
+; @param event
+;-------------------------------------------------------------
+get_window_event:
+    push    rbp
+
+    lea     rcx, [rdi]
     mov     rdi, [display]
     mov     rsi, [window]
     mov     rdx, 3h ; KeyReleaseMask | KeyPressMask
-    lea     rcx, [rdi]
     call    XCheckWindowEvent
+
+    pop     rbp
     ret
 
 section .rodata

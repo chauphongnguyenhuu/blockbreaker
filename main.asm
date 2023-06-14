@@ -8,7 +8,7 @@ section .text
     extern clear_window
     extern flush_buffer
     extern draw_rectangle
-    extern get_event
+    extern get_window_event
 
     extern XCheckWindowEvent
     extern XLookupKeysym
@@ -25,7 +25,7 @@ _start:
 
 .process_events:
     lea     rdi, [event]
-    call    get_event
+    call    get_window_event
     cmp     al, 0h
     je      .update
 
