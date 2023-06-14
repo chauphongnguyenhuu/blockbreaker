@@ -1,3 +1,5 @@
+section .text
+
     global print_string
 
 ;-------------------------------------------------------------
@@ -21,5 +23,6 @@ print_string:
     mov     rdi, 1
     ; rdx is holding the message length
     syscall
+
 .done:
     ret
