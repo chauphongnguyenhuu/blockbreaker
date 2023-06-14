@@ -209,6 +209,3 @@ section .data
     root_window:    dq 0h
     window:         dq 0h
     gc:             dq 0h
-
-section .bss
-    event: resb 0xc0
