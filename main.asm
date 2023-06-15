@@ -28,10 +28,10 @@ _start:
     jmp     .process_events
 
 .render:
-    mov     rdi, 10
-    mov     rsi, 20
-    mov     rdx, 200
-    mov     rcx, 50
+    mov     rdi, [paddle_x]
+    mov     rsi, [paddle_y]
+    mov     rdx, [paddle_width]
+    mov     rcx, [paddle_height]
     call    draw_rectangle
 
     jmp     .process_events
@@ -40,6 +40,12 @@ _start:
     mov     rax, SYS_EXIT
     xor     rdi, rdi
     syscall
+
+section .data
+    paddle_x:       dq 300
+    paddle_y:       dq 750
+    paddle_width:   dq 200
+    paddle_height:  dq 30
 
 section .bss
     event: resq 24
