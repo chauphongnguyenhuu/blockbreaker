@@ -1,5 +1,6 @@
 %define WINDOW_WIDTH 800
 %define WINDOW_HEIGHT 800
+%define KEY_PRESS 2h
 %define KEY_RELEASE 3h
 
 section .text
@@ -9,6 +10,7 @@ section .text
     global draw_rectangle
     global get_window_event
     global check_key_release
+    global check_key_press
 
     extern print_string
 
@@ -105,9 +107,11 @@ create_window:
 ;-------------------------------------------------------------
 clear_window:
     sub     rsp, 8
+
     mov     rdi, [display]
     mov     rsi, [window]
     call    XClearWindow
+
     add     rsp, 8
     ret
 
@@ -179,6 +183,30 @@ check_key_release:
 
     mov     rbp, [rdi]
     cmp     rbp, KEY_RELEASE
+    jne     .failed
+
+    mov     rbp, rsi
+
+    xor     rsi, rsi
+    call    XLookupKeysym
+    cmp     rax, rbp
+    jne     .failed
+
+    mov     rax, 1
+    jmp     .exit
+
+.failed:
+    xor     rax, rax
+
+.exit:
+    pop     rbp
+    ret
+
+check_key_press:
+    push    rbp
+
+    mov     rbp, [rdi]
+    cmp     rbp, KEY_PRESS
     jne     .failed
 
     mov     rbp, rsi
